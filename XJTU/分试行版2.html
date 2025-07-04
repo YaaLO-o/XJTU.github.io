@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园活动管理系统 - XJTU智慧校园</title>
+
+    <!-- 引入高德地图 JS API -->
+    <script src="https://webapi.amap.com/maps?v=2.0&key=c3671efe6405aa35284c356354f6ad81"></script>
+
+    <!-- 引入字体图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- 引入Chart.js用于统计图表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            width: 100%;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #ffffff, #f0f9ff);
+            color: #333;
+            position: relative;
+            padding-bottom: 80px;
+        }
+
+        /* 导航栏样式 */
+        .flex-container {
+            z-index: 1000;
+            display: flex;
+            width: 100%;
+            height: auto;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            background-color: white;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            padding: 10px 0;
+        }
+
+        ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .flex-logo {
+            display: flex;
+            z-index: 1000;
+            position: relative;
+            width: 200px;
+            height: 80px;
+            overflow: hidden;
+        }
+
+        .dropdown {
+            z-index: 1000;
+            position: relative;
+            display: inline-block;
+            color: #555;
+            text-align: center;
+            padding: 12px 16px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .dropdown:hover {
+            color: #e74c3c;
+            transform: translateY(-3px);
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            z-index: 1;
+            top: 100%;
+            left: 0;
+        }
+
+        .dropdown-content a {
+            color: #555;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            transition: all 0.2s;
+        }
+
+        .dropdown-content a:hover {
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+            padding-left: 20px;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .logo {
+            width: 120px;
+            height: 50px;
+            position: relative;
+            top: -1px;
+            left: -10px;
+            transition: all 0.5s;
+        }
+
+        .logo:hover {
+            transform: scale(1.1);
+        }
+
+        .icon {
+            width: 30px;
+            height: 30px;
+            transition: all 0.3s;
+            color: #555;
+        }
+
+        .icon:hover {
+            transform: scale(1.2);
+            color: #e74c3c;
+        }
+
+        #myBtn {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 99;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            font-size: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 100px auto 40px;
+            padding: 0 20px;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+            font-size: 2.5rem;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        .page-title::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            border-radius: 2px;
+        }
+
+        /* 活动管理区域 */
+        .activity-manager {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .activity-manager {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 活动列表 */
+        .activity-list {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .activity-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(to right, #6c757d, #495057);
+        }
+
+        .btn-success {
+            background: linear-gradient(to right, #28a745, #1e7e34);
+        }
+
+        .activity-item {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .activity-item:hover {
+            background: #e9f7fe;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .activity-item.active {
+            border-left: 4px solid #e74c3c;
+            background: #fff8f0;
+        }
+
+        .activity-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .activity-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+
+        .activity-status {
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #ffc107;
+            color: #343a40;
+        }
+
+        .status-active {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-completed {
+            background: #6c757d;
+            color: white;
+        }
+
+        .activity-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        /* 活动表单 */
+        .activity-form {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 480px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 路线规划区域 */
+        .route-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 40px;
+        }
+
+        .route-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .map-container {
+            height: 500px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        #routeMap {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+        }
+
+        .route-points {
+            margin-top: 15px;
+        }
+
+        .route-point-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 统计区域 */
+        .stats-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #3498db;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: #6c757d;
+        }
+
+        .chart-container {
+            margin-top: 30px;
+            height: 300px;
+            position: relative;
+        }
+
+        /* 页脚 */
+        .footer {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: auto;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.85);
+            width: 100%;
+            padding: 15px 0;
+        }
+
+        .p5 {
+            display: flex;
+            font-size: 14px;
+            color: #ddd;
+            margin: 4px 0;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .container {
+                margin-top: 140px;
+            }
+
+            .page-title {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="myBtn" title="返回顶部"><i class="fas fa-arrow-up"></i></button>
+
+    <div class="flex-container">
+        <div class="logo">
+            <a href="#"><img src="img/logo.png" class="logo" alt="西安交通大学"></a>
+        </div>
+        <ul>
+            <div class="dropdown">
+                <a href="试行版5.1.html" class="dropdown">首页</a>
+            </div>
+            <div class="dropdown">
+                <a href="分试行版1.0.html" class="dropdown">景点介绍</a>
+            </div>
+            <div class="dropdown">
+                <a href="分试行版2.html" class="dropdown">全部活动</a>
+                <div class="dropdown-content">
+                    <a href="#">活动介绍</a>
+                    <a href="#">活动管理</a>
+                    <a href="#">活动剪影</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <a href="#" class="dropdown">交通推荐</a>
+            </div>
+            <div class="dropdown">
+                <a href="https://lcdp.xjtu.edu.cn/sjtu-visitor-ui/index#/home" class="dropdown">预约服务</a>
+            </div>
+        </ul>
+        <div class="dropdown">
+            <a href="#" class="fas fa-search icon"></a>
+        </div>
+        <div class="dropdown">
+            <i class="fas fa-user icon"></i>
+        </div>
+        <div class="dropdown">
+            <i class="fas fa-bars icon"></i>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1 class="page-title">校园活动管理系统</h1>
+
+        <div class="activity-manager">
+            <div class="activity-list">
+                <div class="activity-list-header">
+                    <h2 class="section-title">活动列表</h2>
+                    <button class="btn" id="createActivityBtn"><i class="fas fa-plus"></i> 创建新活动</button>
+                </div>
+
+                <div class="activity-item active">
+                    <div class="activity-title">2024校园樱花节</div>
+                    <div class="activity-meta">
+                        <span><i class="far fa-calendar"></i> 2024-03-25 至 2024-04-05</span>
+                        <span><i class="fas fa-map-marker-alt"></i> 樱花大道、西花园</span>
+                    </div>
+                    <div class="activity-status status-active">进行中</div>
+                    <div class="activity-actions">
+                        <button class="btn btn-secondary"><i class="fas fa-edit"></i> 编辑</button>
+                        <button class="btn btn-success"><i class="fas fa-chart-line"></i> 统计</button>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-title">校园开放日</div>
+                    <div class="activity-meta">
+                        <span><i class="far fa-calendar"></i> 2024-04-20</span>
+                        <span><i class="fas fa-map-marker-alt"></i> 主校区</span>
+                    </div>
+                    <div class="activity-status status-pending">筹备中</div>
+                    <div class="activity-actions">
+                        <button class="btn btn-secondary"><i class="fas fa-edit"></i> 编辑</button>
+                        <button class="btn"><i class="fas fa-route"></i> 路线</button>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-title">科技创新大赛</div>
+                    <div class="activity-meta">
+                        <span><i class="far fa-calendar"></i> 2024-05-10 至 2024-05-12</span>
+                        <span><i class="fas fa-map-marker-alt"></i> 科学馆、工程馆</span>
+                    </div>
+                    <div class="activity-status status-pending">筹备中</div>
+                    <div class="activity-actions">
+                        <button class="btn btn-secondary"><i class="fas fa-edit"></i> 编辑</button>
+                        <button class="btn"><i class="fas fa-route"></i> 路线</button>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-title">2023秋季运动会</div>
+                    <div class="activity-meta">
+                        <span><i class="far fa-calendar"></i> 2023-10-15 至 2023-10-17</span>
+                        <span><i class="fas fa-map-marker-alt"></i> 体育场</span>
+                    </div>
+                    <div class="activity-status status-completed">已结束</div>
+                    <div class="activity-actions">
+                        <button class="btn btn-secondary"><i class="fas fa-edit"></i> 编辑</button>
+                        <button class="btn btn-success"><i class="fas fa-chart-line"></i> 统计</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="activity-form">
+                <h2 class="section-title">创建新活动</h2>
+
+                <div class="form-group">
+                    <label class="form-label">活动名称</label>
+                    <input type="text" class="form-control" placeholder="例如：校园樱花节">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">开始日期</label>
+                        <input type="date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">结束日期</label>
+                        <input type="date" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">活动地点</label>
+                    <input type="text" class="form-control" placeholder="例如：樱花大道、西花园">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">活动描述</label>
+                    <textarea class="form-control" placeholder="详细描述活动内容、亮点等"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">目标群体</label>
+                    <div>
+                        <label style="margin-right: 15px;">
+                            <input type="checkbox"> 在校学生
+                        </label>
+                        <label style="margin-right: 15px;">
+                            <input type="checkbox"> 教职工
+                        </label>
+                        <label style="margin-right: 15px;">
+                            <input type="checkbox"> 校友
+                        </label>
+                        <label>
+                            <input type="checkbox"> 公众访客
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">预计参与人数</label>
+                    <input type="number" class="form-control" placeholder="例如：5000">
+                </div>
+
+                <button class="btn" style="width: 100%;">
+                    <i class="fas fa-save"></i> 保存活动信息
+                </button>
+            </div>
+        </div>
+
+        <div class="route-section">
+            <h2 class="section-title">活动路线规划</h2>
+            <p>为"2024校园樱花节"设计专属路线，添加特别关注点及为不同群体设计路线</p>
+
+            <div class="route-controls">
+                <select class="form-control" style="max-width: 250px;">
+                    <option>-- 选择目标群体 --</option>
+                    <option selected>普通游客路线</option>
+                    <option>学生团体路线</option>
+                    <option>摄影爱好者路线</option>
+                    <option>家庭亲子路线</option>
+                </select>
+                <button class="btn"><i class="fas fa-plus"></i> 添加路线点</button>
+                <button class="btn btn-secondary"><i class="fas fa-route"></i> 生成路线</button>
+                <button class="btn btn-success"><i class="fas fa-check"></i> 发布路线</button>
+            </div>
+
+            <div class="map-container">
+                <div id="routeMap"></div>
+                <div class="map-overlay">
+                    <h3>路线点管理</h3>
+                    <div class="route-points">
+                        <div class="route-point-item">
+                            <span>1. 北门（起点）</span>
+                            <i class="fas fa-times" style="color: #e74c3c; cursor: pointer;"></i>
+                        </div>
+                        <div class="route-point-item">
+                            <span>2. 樱花大道</span>
+                            <i class="fas fa-times" style="color: #e74c3c; cursor: pointer;"></i>
+                        </div>
+                        <div class="route-point-item">
+                            <span>3. 腾飞塔</span>
+                            <i class="fas fa-times" style="color: #e74c3c; cursor: pointer;"></i>
+                        </div>
+                        <div class="route-point-item">
+                            <span>4. 西花园</span>
+                            <i class="fas fa-times" style="color: #e74c3c; cursor: pointer;"></i>
+                        </div>
+                        <div class="route-point-item">
+                            <span>5. 饮水思源碑（终点）</span>
+                            <i class="fas fa-times" style="color: #e74c3c; cursor: pointer;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <h2 class="section-title">活动参与统计</h2>
+            <p>"2024校园樱花节"参与情况分析（截至今日）</p>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-users fa-2x" style="color: #3498db;"></i>
+                    <div class="stat-value">3,842</div>
+                    <div class="stat-label">总参与人数</div>
+                </div>
+
+                <div class="stat-card">
+                    <i class="fas fa-male fa-2x" style="color: #3498db;"></i>
+                    <div class="stat-value">2,156</div>
+                    <div class="stat-label">男性参与者</div>
+                </div>
+
+                <div class="stat-card">
+                    <i class="fas fa-female fa-2x" style="color: #3498db;"></i>
+                    <div class="stat-value">1,686</div>
+                    <div class="stat-label">女性参与者</div>
+                </div>
+
+                <div class="stat-card">
+                    <i class="fas fa-star fa-2x" style="color: #3498db;"></i>
+                    <div class="stat-value">4.8</div>
+                    <div class="stat-label">平均评分（5分制）</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="participationChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="p5">© 2025 第六组 管理信息系统课程设计</div>
+        <div class="p5">组长 潘洋洋 | 组员 郑海歌 刘小淅 滕芳菲 段佳轩</div>
+    </div>
+
+    <script>
+        // 初始化地图
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化地图
+            const map = new AMap.Map('routeMap', {
+                resizeEnable: true,
+                zoom: 16,
+                center: [108.983715, 34.246162],
+                viewMode: '3D',
+                mapStyle: 'amap://styles/b9dfe8aa66119f2e457dc8ad12c3538c'
+            });
+
+            // 添加校园标记点
+            const locations = [
+                {name: "北门", position: [108.983729, 34.250952], icon: "start"},
+                {name: "樱花大道", position: [108.982743, 34.248507]},
+                {name: "腾飞塔", position: [108.983712, 34.248715]},
+                {name: "西花园", position: [108.984871, 34.248545]},
+                {name: "饮水思源碑", position: [108.98372, 34.250468], icon: "end"}
+            ];
+
+            // 添加标记点
+            locations.forEach((loc, index) => {
+                let iconUrl = "https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png";
+                if (loc.icon === "start") {
+                    iconUrl = "https://webapi.amap.com/theme/v1.3/markers/n/start.png";
+                } else if (loc.icon === "end") {
+                    iconUrl = "https://webapi.amap.com/theme/v1.3/markers/n/end.png";
+                }
+
+                const marker = new AMap.Marker({
+                    position: loc.position,
+                    map: map,
+                    title: loc.name,
+                    icon: iconUrl,
+                    offset: new AMap.Pixel(-13, -30)
+                });
+
+                // 添加标签
+                const label = new AMap.Text({
+                    text: (index + 1) + '. ' + loc.name,
+                    anchor: 'top-center',
+                    offset: new AMap.Pixel(0, 5),
+                    style: {
+                        'padding': '5px 10px',
+                        'background': 'rgba(255, 255, 255, 0.8)',
+                        'border-radius': '4px',
+                        'border': '1px solid #ddd',
+                        'font-size': '14px'
+                    }
+                });
+                marker.setLabel(label);
+            });
+
+            // 绘制路线
+            const path = locations.map(loc => loc.position);
+            const polyline = new AMap.Polyline({
+                path: path,
+                isOutline: true,
+                outlineColor: '#ffeeee',
+                borderWeight: 1,
+                strokeColor: "#3498db",
+                strokeOpacity: 0.8,
+                strokeWeight: 6,
+                strokeStyle: "solid",
+                lineJoin: 'round',
+                lineCap: 'round',
+                zIndex: 50,
+            });
+
+            map.add(polyline);
+            map.setFitView();
+
+            // 初始化统计图表
+            const ctx = document.getElementById('participationChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['3月25日', '3月26日', '3月27日', '3月28日', '3月29日', '3月30日', '3月31日'],
+                    datasets: [{
+                        label: '每日参与人数',
+                        data: [412, 523, 487, 598, 632, 785, 405],
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '参与人数'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '日期'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: '樱花节每日参与人数趋势'
+                        }
+                    }
+                }
+            });
+
+            // 返回顶部功能
+            const backToTopBtn = document.getElementById('myBtn');
+
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    backToTopBtn.style.display = 'block';
+                } else {
+                    backToTopBtn.style.display = 'none';
+                }
+            });
+
+            backToTopBtn.addEventListener('click', function() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+
+            // 活动项点击事件
+            document.querySelectorAll('.activity-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('.activity-item').forEach(i => {
+                        i.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+
+            // 创建活动按钮事件
+            document.getElementById('createActivityBtn').addEventListener('click', function() {
+                alert('创建新活动功能已激活！');
+                // 在实际应用中，这里会显示创建表单并清空内容
+            });
+        });
+
+        // MongoDB连接模拟
+        // 在实际应用中，这里会有与后端API的交互
+        class ActivityService {
+            constructor() {
+                // 模拟MongoDB连接
+                this.activities = [
+                    {
+                        id: 1,
+                        title: "2024校园樱花节",
+                        startDate: "2024-03-25",
+                        endDate: "2024-04-05",
+                        location: "樱花大道、西花园",
+                        status: "active",
+                        participants: 3842
+                    },
+                    {
+                        id: 2,
+                        title: "校园开放日",
+                        startDate: "2024-04-20",
+                        endDate: "2024-04-20",
+                        location: "主校区",
+                        status: "pending",
+                        participants: 0
+                    }
+                ];
+            }
+
+            // 获取所有活动
+            getAllActivities() {
+                return this.activities;
+            }
+
+            // 创建新活动
+            createActivity(activityData) {
+                const newActivity = {
+                    id: this.activities.length + 1,
+                    ...activityData,
+                    status: "pending",
+                    participants: 0
+                };
+                this.activities.push(newActivity);
+                return newActivity;
+            }
+
+            // 更新活动
+            updateActivity(id, updateData) {
+                const index = this.activities.findIndex(a => a.id === id);
+                if (index !== -1) {
+                    this.activities[index] = {...this.activities[index], ...updateData};
+                    return this.activities[index];
+                }
+                return null;
+            }
+
+            // 删除活动
+            deleteActivity(id) {
+                const index = this.activities.findIndex(a => a.id === id);
+                if (index !== -1) {
+                    return this.activities.splice(index, 1)[0];
+                }
+                return null;
+            }
+        }
+
+        // 初始化活动服务
+        const activityService = new ActivityService();
+        console.log("活动服务已初始化，模拟MongoDB连接:", activityService.getAllActivities());
+    </script>
+</body>
+</html>
